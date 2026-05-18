@@ -25,7 +25,10 @@ const editorTheme = EditorView.theme(
       lineHeight: "1.75",
       overflow: "auto",
     },
-    // 文档式正文列:居中、限宽,贴近 Typora 的写作区
+    // 文档式正文列:居中 + 两侧留白。--mkn-content-width 现为百分比,
+    // 经 max-width 生效 → 列宽随窗口按比例伸缩(窗口越宽正文越宽,始终
+    // 留两侧呼吸位),又不会被 CodeMirror 给 .cm-content 的 min-width 顶满。
+    // 导出 HTML 的正文宽度在 src/export/render.ts 另行固定,互不影响。
     ".cm-content": {
       maxWidth: "var(--mkn-content-width)",
       margin: "0 auto",

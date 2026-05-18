@@ -52,6 +52,14 @@ const api: MknApi = {
     ipcRenderer.send("mkn:setDocumentEdited", edited);
   },
 
+  // 访达双击 / 拖到 Dock / 命令行打开:主进程把文件路径推下来。
+  onOpenPath: (cb: (path: string) => void): (() => void) =>
+    subscribe<string>("mkn:open-path", cb),
+
+  setDocTitle: (p: string | null): void => {
+    ipcRenderer.send("mkn:setDocTitle", p);
+  },
+
   saveAsset: (
     docPath: string,
     data: Uint8Array,

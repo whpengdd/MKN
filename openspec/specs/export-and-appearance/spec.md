@@ -48,3 +48,12 @@ TBD - created by archiving change build-typora-style-editor. Update Purpose afte
 - **WHEN** 选择暗色主题
 - **THEN** 整个应用切换为协调的暗色配色;选回浅色可还原
 
+### Requirement: 正文列宽随窗口伸缩
+
+编辑器正文列 SHALL 居中并保留两侧留白,列宽 SHALL 随窗口尺寸按比例伸缩(经 `--mkn-content-width` 百分比 + `.cm-content` 的 `max-width` 生效),MUST NOT 被 CodeMirror 给 `.cm-content` 的 `min-width` 顶满整宽。导出 HTML 的正文宽度独立设定,不受此影响。
+
+#### Scenario: 拉伸窗口正文随之变化
+
+- **WHEN** 拉宽或收窄应用窗口
+- **THEN** 正文可读列宽按比例随之变化,始终居中且两侧留白(窗口越宽正文越宽)
+

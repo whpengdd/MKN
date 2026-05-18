@@ -44,3 +44,17 @@ TBD - created by archiving change build-typora-style-editor. Update Purpose afte
 - **WHEN** 触发"打开文件夹"菜单或 ⇧⌘O
 - **THEN** 弹出系统目录选择,选定后文件树以其为根
 
+### Requirement: 系统级打开文件
+
+外壳 SHALL 接收操作系统传入的"打开此文件"请求:macOS 经 `open-file` 事件(冷启动早于 `whenReady` 也 MUST NOT 丢弃),Windows/Linux 经 `process.argv` 与单实例 `second-instance` 的 argv;文件路径 SHALL 在渲染端就绪(`did-finish-load`)后才下发。该方式打开 MUST 走与文件树一致的脏文档确认,并 MUST 优先于 hot-exit 会话恢复。系统窗口标题 SHALL 跟随当前文档名(macOS 同步标题栏代理图标);未命名草稿回落为应用名。
+
+#### Scenario: 访达双击打开
+
+- **WHEN** 在访达双击 `.md`、拖到 Dock 图标,或 `open file.md`
+- **THEN** 该文件作为当前文档打开,顶栏与系统标题栏均显示其文件名(而非"未命名")
+
+#### Scenario: 已开着时再打开另一个文件
+
+- **WHEN** 应用已运行,再从访达双击另一个 `.md`
+- **THEN** 复用现有窗口切换到该文件(不另起进程);若当前有未保存改动先弹确认
+
