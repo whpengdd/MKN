@@ -63,6 +63,18 @@ export interface MknApi {
   /** 反映"未保存"状态到窗口(macOS 标题栏圆点;不再用于关闭确认) */
   setDocumentEdited(edited: boolean): void;
 
+  /* ── 访达 / Dock / 命令行打开文件(Phase 2 后补:之前完全缺失,
+        双击 .md 只会空开成"未命名")────────────────────────────── */
+
+  /**
+   * 主进程经访达双击 / 拖到 Dock 图标 / 命令行参数请求打开某文件时回调。
+   * 返回取消订阅函数。渲染端据此走正常"打开文档"流程(脏文档先确认)。
+   */
+  onOpenPath(cb: (path: string) => void): () => void;
+
+  /** 让系统窗口标题 / macOS 标题栏代理图标跟随当前文档(null = 未命名草稿)。 */
+  setDocTitle(path: string | null): void;
+
   /* ── 会话缓存(hot-exit:关闭不再提示保存) ───────────────────── */
 
   /**

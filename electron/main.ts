@@ -3,7 +3,13 @@
 // 风格对齐 src/core/livePreview/*.ts:注释讲清"为什么这么做",而非复述代码。
 
 import { app, BrowserWindow, dialog, ipcMain, Menu, shell } from "electron";
-import { promises as fs, watch as fsWatch, type FSWatcher } from "node:fs";
+import {
+  promises as fs,
+  watch as fsWatch,
+  existsSync,
+  statSync,
+  type FSWatcher,
+} from "node:fs";
 import * as path from "node:path";
 import * as os from "node:os";
 import { execFile, spawn } from "node:child_process";
@@ -32,6 +38,72 @@ const MD_FILTERS = [
 ];
 
 let win: BrowserWindow | null = null;
+
+// ── 访达双击 / 拖到 Dock / 命令行参数打开的文件 ──────────────────────
+// macOS 经 app 的 'open-file' 事件传文件;冷启动时该事件可能早于
+// whenReady,故处理器必须在模块顶层注册并 preventDefault。
+// Windows/Linux 走 process.argv(冷启动)或 second-instance 的 argv。
+// 路径先暂存,等渲染端 did-finish-load 真正接好 IPC 再下发,
+// 否则发给还没监听的页面会被丢弃 → 仍是"未命名"。
+let pendingOpenFile: string | null = null;
+let rendererReady = false;
+
+// 只把这些后缀当"要打开的文档"(MKN 是纯文本 Markdown 编辑器)。
+const TEXT_EXT = new Set([".md", ".markdown", ".txt", ".mdown", ".mkd"]);
+
+/** 从 argv 里挑出"看起来是要打开的文本文件"(防御:存在且确为文件)。 */
+function pickFileFromArgv(argv: string[]): string | null {
+  // argv[0] 是 electron / 可执行文件本身;dev 下还会有 "." 之类,逐个甄别。
+  for (const a of argv.slice(1)) {
+    if (!a || a.startsWith("-")) continue;
+    try {
+      if (
+        TEXT_EXT.has(path.extname(a).toLowerCase()) &&
+        existsSync(a) &&
+        statSync(a).isFile()
+      ) {
+        return path.resolve(a);
+      }
+    } catch {
+      /* 路径非法 / 无权限:跳过,绝不拖垮启动 */
+    }
+  }
+  return null;
+}
+
+/** 请求渲染端打开某文件;渲染端没就绪就先暂存,就绪后由 flush 补发。 */
+function requestOpenInRenderer(filePath: string): void {
+  const resolved = path.resolve(filePath);
+  if (win && rendererReady) {
+    if (win.isMinimized()) win.restore();
+    win.focus();
+    win.webContents.send("mkn:open-path", resolved);
+  } else {
+    pendingOpenFile = resolved;
+  }
+}
+
+// macOS:访达双击 / 把 .md 拖到 Dock 图标。顶层注册 + preventDefault 必需。
+app.on("open-file", (event, filePath) => {
+  event.preventDefault();
+  requestOpenInRenderer(filePath);
+});
+
+// 单实例锁:已开着时再"双击文件"不另起进程,而是把文件交给现有窗口
+// (Windows/Linux 经 second-instance 的 argv;macOS 仍走上面的 open-file)。
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on("second-instance", (_e, argv) => {
+    const f = pickFileFromArgv(argv);
+    if (f) {
+      requestOpenInRenderer(f);
+    } else if (win) {
+      if (win.isMinimized()) win.restore();
+      win.focus();
+    }
+  });
+}
 
 // ── 单文件 watcher ───────────────────────────────────────────────
 // 只盯"最近一次 watchFile 请求的那个文件";切换文件即换 watcher。
@@ -200,6 +272,19 @@ function registerIpc(): void {
   // 未保存状态:仅做 macOS 标题栏圆点的视觉提示(不再驱动关闭确认)。
   ipcMain.on("mkn:setDocumentEdited", (_e, edited: boolean) => {
     win?.setDocumentEdited(edited);
+  });
+
+  // 让系统窗口标题 / macOS 标题栏代理图标跟随当前文档(null = 未命名草稿)。
+  // 渲染端顶栏文件名之外,这里同步原生标题,"文档名"在系统层也可见。
+  ipcMain.on("mkn:setDocTitle", (_e, p: string | null) => {
+    if (!win) return;
+    if (p) {
+      win.setTitle(`${path.basename(p)} — MKN`);
+      if (process.platform === "darwin") win.setRepresentedFilename(p);
+    } else {
+      win.setTitle("隐墨");
+      if (process.platform === "darwin") win.setRepresentedFilename("");
+    }
   });
 
   // ── 会话缓存(hot-exit) ──────────────────────────────────────────
@@ -421,7 +506,7 @@ function createWindow(): void {
     height: 760,
     minWidth: 640,
     minHeight: 420,
-    title: "MKN",
+    title: "隐墨",
     titleBarStyle: "default",
     backgroundColor: "#ffffff",
     webPreferences: {
@@ -445,8 +530,20 @@ function createWindow(): void {
     return { action: "deny" };
   });
 
+  // 渲染端真正加载完(IPC 已接好)才下发暂存的"待打开文件",
+  // 否则访达冷启动那一刻 mkn:open-path 会发给还没监听的页面被丢弃。
+  win.webContents.on("did-finish-load", () => {
+    rendererReady = true;
+    if (pendingOpenFile && win) {
+      const p = pendingOpenFile;
+      pendingOpenFile = null;
+      win.webContents.send("mkn:open-path", p);
+    }
+  });
+
   win.on("closed", () => {
     win = null;
+    rendererReady = false; // 下次 createWindow 重新等 did-finish-load
   });
 
   Menu.setApplicationMenu(buildMenu(() => win));
@@ -454,6 +551,14 @@ function createWindow(): void {
 
 app.whenReady().then(() => {
   registerIpc();
+
+  // 冷启动:macOS 的 open-file 可能已在 whenReady 前置好 pendingOpenFile;
+  // Windows/Linux 双击文件则把路径放进 process.argv,这里兜底解析一次。
+  if (!pendingOpenFile) {
+    const f = pickFileFromArgv(process.argv);
+    if (f) pendingOpenFile = f;
+  }
+
   createWindow();
 
   // macOS:Dock 点击且无窗口时重建。

@@ -15,7 +15,8 @@
   --mkn-code-bg: #f6f7f9;
   --mkn-code-fg: #d1395a;
   --mkn-quote-bar: #d8dde4;
-  --mkn-content-width: 760px;
+  /* 正文列宽:百分比 → 随窗口按比例伸缩,居中并保留两侧留白(见 core/theme.ts) */
+  --mkn-content-width: 88%;
 
   --mkn-font-body: -apple-system, BlinkMacSystemFont, "PingFang SC",
     "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;

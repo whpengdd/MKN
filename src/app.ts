@@ -324,7 +324,7 @@ function bootBrowser(): void {
   view.focus();
 }
 
-const BROWSER_SAMPLE = `# MKN · 浏览器预览模式
+const BROWSER_SAMPLE = `# 隐墨 · 浏览器预览模式
 
 当前在 \`npm run dev\` 浏览器下运行,**没有文件系统接入**。这是纯内核 + Phase 3 特性体验:移动光标看语法隐现,试试中文输入法。
 
@@ -567,7 +567,7 @@ function buildExportActions(
       if (!ok) {
         notify(
           "导出 Word(.docx)需要系统安装 pandoc。\n\n" +
-            "安装后重启 MKN 即可使用(macOS:brew install pandoc)。"
+            "安装后重启 隐墨 即可使用(macOS:brew install pandoc)。"
         );
         return;
       }
@@ -655,6 +655,10 @@ function bootShell(api: MknApi): void {
   // 用可变引用 + getDocPath 闭包打破时序:每次粘贴时现取 doc.currentPath()。
   let doc: DocLifecycle;
   const getDocPath = () => doc?.currentPath() ?? null;
+
+  // 访达/Dock/命令行显式打开的文件优先级高于 hot-exit 会话恢复:
+  // 用户双击的就是想看这个文件,别被"恢复上次"覆盖掉。
+  let explicitOpen = false;
 
   const { extra, wireUi } = buildFeatureExtras(getDocPath);
 
@@ -764,6 +768,8 @@ function bootShell(api: MknApi): void {
     fileNameEl.textContent = p ? basename(p) : "未命名";
     fileNameEl.title = p ?? "未命名草稿";
     dotEl.classList.toggle("mkn-dot-on", doc.isDirty());
+    // 同步系统窗口标题 / macOS 代理图标,"文档名"在原生层也跟随。
+    api.setDocTitle(p);
   }
   doc.onDirtyChange(refreshHeader);
   doc.onPathChange((p) => {
@@ -775,7 +781,7 @@ function bootShell(api: MknApi): void {
   doc.onOpenError((p) => {
     window.alert(
       `「${basename(p)}」不是纯文本 / Markdown 文件,打不开。\n\n` +
-        `MKN 是 Markdown 编辑器,只支持 .md / .markdown / .txt 等纯文本;` +
+        `隐墨 是 Markdown 编辑器,只支持 .md / .markdown / .txt 等纯文本;` +
         `.docx / .pdf / 图片 等是二进制格式。`
     );
   });
@@ -874,10 +880,22 @@ function bootShell(api: MknApi): void {
     // 选否:保留本地修改,什么都不做(后续自保存会覆盖外部改动)。
   });
 
+  // ---- 访达双击 / 拖到 Dock / 命令行打开 ----
+  // Phase 2 后补:之前主进程完全不接 open-file/argv,这类打开会空开成
+  // "未命名"。走 openWithGuard(脏文档先确认),并置位 explicitOpen 让
+  // hot-exit 恢复给它让路 —— 用户双击的就是想看这个文件。
+  api.onOpenPath((p) => {
+    explicitOpen = true;
+    void openWithGuard(p);
+  });
+
   // ---- hot-exit:启动恢复上次会话 ----
   // 关闭从不提示保存,全靠这里把上次缓存的文件 + 全文恢复回来。
   void (async () => {
+    if (explicitOpen) return; // 已有显式打开请求:不拿旧会话覆盖它
     const sess = await api.loadSession();
+    // loadSession 是异步往返,期间可能刚收到 open-file → 再判一次
+    if (explicitOpen) return;
     if (!sess || sess.content.trim() === "") return; // 无缓存 / 空草稿:正常空开
     if (sess.path) {
       try {
@@ -929,7 +947,7 @@ function buildLayout(showSidebarTabs: boolean): Layout {
   const toolbar = el("div");
   toolbar.id = "toolbar";
   const brand = el("span", "brand");
-  brand.textContent = "MKN";
+  brand.textContent = "隐墨";
   const fileWrap = el("span", "mkn-filewrap");
   const dot = el("span", "mkn-dot");
   const fileName = el("span", "mkn-filename");
@@ -1209,16 +1227,16 @@ try {
   document.body.innerHTML = "";
   const box = document.createElement("pre");
   box.textContent =
-    `MKN 启动失败(${shell ? "Electron 外壳" : "浏览器"}模式):\n\n` + err;
+    `隐墨 启动失败(${shell ? "Electron 外壳" : "浏览器"}模式):\n\n` + err;
   box.style.cssText =
     "margin:40px auto;max-width:680px;padding:20px 24px;border:1px solid #e8e8e8;border-radius:10px;font:13px/1.6 ui-monospace,Menlo,monospace;color:#d1395a;white-space:pre-wrap;word-break:break-word";
   document.body.appendChild(box);
   // eslint-disable-next-line no-console
-  console.error("[MKN] boot failed:", e);
+  console.error("[隐墨] boot failed:", e);
 }
 
 // 控制台留一行明确的模式标记,便于真机排障(window.mkn 有没有注入一目了然)。
 // eslint-disable-next-line no-console
 console.info(
-  `[MKN] shell = ${shell ? "Electron(window.mkn 已注入)" : "browser(window.mkn 缺失 → 降级)"}`
+  `[隐墨] shell = ${shell ? "Electron(window.mkn 已注入)" : "browser(window.mkn 缺失 → 降级)"}`
 );
