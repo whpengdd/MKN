@@ -1,0 +1,111 @@
+/* =========================================================================
+   MKN 大纲面板(Phase 3)
+   与文件树(fileTree.css)同处左侧栏、做 Tab 切换 —— 视觉语言保持一致:
+   窄、安静、靠缩进与留白说话,配色只取 theme-default.css 的 --mkn-* 变量。
+   ========================================================================= */
+
+.mkn-outline {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 0;
+  font-family: var(--mkn-font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--mkn-fg-soft);
+  background: var(--mkn-bg);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 细而淡的滚动条,与文件树一致 */
+.mkn-outline::-webkit-scrollbar {
+  width: 8px;
+}
+.mkn-outline::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--mkn-fg-faint) 40%, transparent);
+  border-radius: 4px;
+}
+.mkn-outline::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--mkn-fg-faint) 70%, transparent);
+}
+
+/* 一个标题条目的可点击行 */
+.mkn-ol-row {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 26px;
+  padding-right: 10px;
+  cursor: pointer;
+  border-radius: 5px;
+  margin: 0 6px;
+  color: var(--mkn-fg-soft);
+}
+.mkn-ol-row:hover {
+  background: color-mix(in srgb, var(--mkn-accent) 8%, transparent);
+  color: var(--mkn-fg);
+}
+
+/* 光标所在章节:低饱和高亮,与文件树 active 同款 */
+.mkn-ol-row.mkn-ol-active {
+  background: color-mix(in srgb, var(--mkn-accent) 14%, transparent);
+  color: var(--mkn-accent);
+}
+.mkn-ol-row.mkn-ol-active .mkn-ol-dot {
+  background: var(--mkn-accent);
+}
+
+/* 层级小圆点:占位 + 暗示层级,深层更小更淡 */
+.mkn-ol-dot {
+  flex: 0 0 auto;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--mkn-fg-faint) 60%, transparent);
+}
+
+/* 标题文字:占满剩余宽度,超长省略号 */
+.mkn-ol-label {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* 按层级递减字号/字重,层次一眼可辨(贴文档大纲的视觉) */
+.mkn-ol-l1 .mkn-ol-label {
+  font-weight: 600;
+  color: var(--mkn-fg);
+}
+.mkn-ol-l2 .mkn-ol-label {
+  font-weight: 600;
+}
+.mkn-ol-l1.mkn-ol-active .mkn-ol-label,
+.mkn-ol-l2.mkn-ol-active .mkn-ol-label {
+  color: var(--mkn-accent);
+}
+.mkn-ol-l3 .mkn-ol-label,
+.mkn-ol-l4 .mkn-ol-label {
+  font-size: 12.5px;
+}
+.mkn-ol-l5 .mkn-ol-label,
+.mkn-ol-l6 .mkn-ol-label {
+  font-size: 12px;
+  color: var(--mkn-fg-faint);
+}
+.mkn-ol-l3 .mkn-ol-dot,
+.mkn-ol-l4 .mkn-ol-dot,
+.mkn-ol-l5 .mkn-ol-dot,
+.mkn-ol-l6 .mkn-ol-dot {
+  width: 4px;
+  height: 4px;
+}
+
+/* 无标题时的占位提示:更淡、不可点 */
+.mkn-ol-empty {
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--mkn-fg-faint);
+}

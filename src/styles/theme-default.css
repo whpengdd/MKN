@@ -1,0 +1,399 @@
+/* =========================================================================
+   MKN 默认主题(Phase 0,单套精调)
+   "简洁"靠排版细节调出来:中文友好字体栈、舒适行高、克制色彩、
+   文档式居中正文列。CSS 变量预留未来可换主题。
+   ========================================================================= */
+
+:root {
+  --mkn-bg: #ffffff;
+  --mkn-fg: #2b2b2b;
+  --mkn-fg-soft: #6b6b6b;
+  --mkn-fg-faint: #9b9b9b;
+  --mkn-accent: #3a7afe;
+  --mkn-selection: #d6e4ff;
+  --mkn-rule: #e8e8e8;
+  --mkn-code-bg: #f6f7f9;
+  --mkn-code-fg: #d1395a;
+  --mkn-quote-bar: #d8dde4;
+  --mkn-content-width: 760px;
+
+  --mkn-font-body: -apple-system, BlinkMacSystemFont, "PingFang SC",
+    "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  --mkn-font-mono: "SF Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas,
+    "PingFang SC", monospace;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--mkn-bg);
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  font-family: var(--mkn-font-body);
+  color: var(--mkn-fg);
+}
+
+/* --- 顶部极简工具条 ------------------------------------------------------ */
+#toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--mkn-rule);
+  font-size: 13px;
+  color: var(--mkn-fg-soft);
+  user-select: none;
+}
+#toolbar .brand {
+  font-weight: 700;
+  color: var(--mkn-fg);
+  letter-spacing: 0.5px;
+}
+#toolbar .hint {
+  color: var(--mkn-fg-faint);
+}
+#toolbar .open-file {
+  margin-left: auto;
+  padding: 4px 12px;
+  border: 1px solid var(--mkn-rule);
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--mkn-fg);
+}
+#toolbar .open-file:hover {
+  border-color: var(--mkn-accent);
+  color: var(--mkn-accent);
+}
+
+#app {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.cm-editor {
+  height: 100%;
+}
+
+/* =========================================================================
+   渲染样式 —— decoration 把这些 class 加到 .cm-line / 内联 span 上
+   ========================================================================= */
+
+/* 标题:光标不在时 # 被隐藏,这里负责字号与节奏 */
+.cm-line.cm-hp-h1 {
+  font-size: 1.9em;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0.8em 0 0.4em;
+}
+.cm-line.cm-hp-h2 {
+  font-size: 1.55em;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0.7em 0 0.35em;
+  padding-bottom: 0.2em;
+  border-bottom: 1px solid var(--mkn-rule);
+}
+.cm-line.cm-hp-h3 {
+  font-size: 1.3em;
+  font-weight: 600;
+  margin: 0.6em 0 0.3em;
+}
+.cm-line.cm-hp-h4 {
+  font-size: 1.12em;
+  font-weight: 600;
+  margin: 0.5em 0 0.25em;
+}
+.cm-line.cm-hp-h5,
+.cm-line.cm-hp-h6 {
+  font-size: 1em;
+  font-weight: 600;
+  color: var(--mkn-fg-soft);
+  margin: 0.5em 0 0.25em;
+}
+
+/* 引用:左竖线 + 柔和文字 */
+.cm-line.cm-hp-quote {
+  border-left: 3px solid var(--mkn-quote-bar);
+  padding-left: 1em;
+  color: var(--mkn-fg-soft);
+}
+
+/* 行内样式 */
+.cm-hp-strong {
+  font-weight: 700;
+}
+.cm-hp-em {
+  font-style: italic;
+}
+.cm-hp-strike {
+  text-decoration: line-through;
+  color: var(--mkn-fg-faint);
+}
+.cm-hp-code {
+  font-family: var(--mkn-font-mono);
+  font-size: 0.88em;
+  background: var(--mkn-code-bg);
+  color: var(--mkn-code-fg);
+  padding: 0.12em 0.36em;
+  border-radius: 4px;
+}
+.cm-hp-link {
+  color: var(--mkn-accent);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--mkn-accent) 35%, transparent);
+  cursor: text;
+}
+
+/* 代码围栏:逐行盒子,首尾行做圆角 */
+.cm-line.cm-hp-codeblock {
+  font-family: var(--mkn-font-mono);
+  font-size: 0.88em;
+  background: var(--mkn-code-bg);
+  padding-left: 1em;
+  padding-right: 1em;
+}
+.cm-line.cm-hp-codeblock-first {
+  border-radius: 8px 8px 0 0;
+  padding-top: 0.7em;
+  margin-top: 0.6em;
+}
+.cm-line.cm-hp-codeblock-last {
+  border-radius: 0 0 8px 8px;
+  padding-bottom: 0.7em;
+  margin-bottom: 0.6em;
+}
+
+/* 列表圆点 widget */
+.mkn-bullet {
+  color: var(--mkn-accent);
+  font-weight: 700;
+}
+
+/* 任务列表复选框 */
+.mkn-task {
+  width: 15px;
+  height: 15px;
+  margin: 0 0.3em 0 0;
+  vertical-align: -2px;
+  accent-color: var(--mkn-accent);
+  cursor: pointer;
+}
+
+/* 行内图片 */
+.mkn-img {
+  max-width: 100%;
+  border-radius: 6px;
+  vertical-align: bottom;
+}
+
+/* 分隔线 widget */
+.mkn-hr {
+  display: inline-block;
+  width: 100%;
+  vertical-align: middle;
+  border: none;
+  border-top: 1px solid var(--mkn-rule);
+  margin: 0.4em 0;
+}
+
+/* 表格渲染 widget */
+.mkn-table-wrap {
+  margin: 0.7em 0;
+  overflow: visible;
+}
+.mkn-table {
+  border-collapse: collapse;
+  font-size: 0.95em;
+  width: 100%;
+}
+.mkn-table th,
+.mkn-table td {
+  border: 1px solid var(--mkn-rule);
+  padding: 7px 12px;
+  text-align: left;
+}
+.mkn-table th {
+  background: var(--mkn-code-bg);
+  font-weight: 600;
+}
+.mkn-table tr:nth-child(even) td {
+  background: color-mix(in srgb, var(--mkn-code-bg) 50%, transparent);
+}
+
+/* 可视化编辑:悬停浮出的工具条 + 当前列高亮 */
+.mkn-table-wrap {
+  position: relative;
+}
+/* 透明 hover 桥:连通表格与上方工具条,鼠标移上去时 :hover 不丢失
+   (否则工具条在盒子外,一移过去就 pointer-events:none,点击穿透成"显示原格式") */
+.mkn-table-wrap::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: -40px;
+  height: 40px;
+}
+.mkn-tbar {
+  position: absolute;
+  top: -34px;
+  left: 0;
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--mkn-bg);
+  border: 1px solid var(--mkn-rule);
+  border-radius: 8px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 5;
+}
+.mkn-table-wrap:hover .mkn-tbar {
+  opacity: 1;
+  pointer-events: auto;
+}
+.mkn-tbar-btn {
+  font-family: var(--mkn-font-body);
+  font-size: 12px;
+  line-height: 1;
+  padding: 5px 8px;
+  border: 1px solid var(--mkn-rule);
+  border-radius: 5px;
+  background: var(--mkn-bg);
+  color: var(--mkn-fg);
+  cursor: pointer;
+}
+.mkn-tbar-btn:hover {
+  border-color: var(--mkn-accent);
+  color: var(--mkn-accent);
+}
+.mkn-table .mkn-cell-active {
+  background: color-mix(in srgb, var(--mkn-accent) 12%, transparent) !important;
+}
+
+/* =========================================================================
+   查找/替换面板(@codemirror/search 默认面板)—— 套上主题,贴 Typora 克制感
+   ========================================================================= */
+.cm-panels {
+  background: var(--mkn-bg);
+  color: var(--mkn-fg);
+  border-bottom: 1px solid var(--mkn-rule);
+  font-family: var(--mkn-font-body);
+}
+.cm-panels.cm-panels-bottom {
+  border-bottom: none;
+  border-top: 1px solid var(--mkn-rule);
+}
+.cm-panel.cm-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 12px;
+}
+.cm-panel.cm-search br {
+  display: none; /* 用 flex-wrap 自然换行,去掉默认硬换行 */
+}
+.cm-panel.cm-search .cm-textfield {
+  font-family: var(--mkn-font-body);
+  font-size: 13px;
+  color: var(--mkn-fg);
+  background: var(--mkn-bg);
+  border: 1px solid var(--mkn-rule);
+  border-radius: 6px;
+  padding: 5px 9px;
+  outline: none;
+}
+.cm-panel.cm-search .cm-textfield:focus {
+  border-color: var(--mkn-accent);
+}
+.cm-panel.cm-search .cm-button {
+  font-family: var(--mkn-font-body);
+  font-size: 12px;
+  line-height: 1;
+  color: var(--mkn-fg);
+  background: var(--mkn-bg);
+  background-image: none;
+  border: 1px solid var(--mkn-rule);
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.cm-panel.cm-search .cm-button:hover {
+  border-color: var(--mkn-accent);
+  color: var(--mkn-accent);
+}
+.cm-panel.cm-search label {
+  font-size: 12px;
+  color: var(--mkn-fg-soft);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.cm-panel.cm-search label input[type="checkbox"] {
+  accent-color: var(--mkn-accent);
+}
+.cm-panel.cm-search [name="close"] {
+  position: absolute;
+  top: 6px;
+  right: 10px;
+  margin: 0;
+  padding: 2px 7px;
+  font-size: 16px;
+  line-height: 1;
+  color: var(--mkn-fg-faint);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.cm-panel.cm-search [name="close"]:hover {
+  color: var(--mkn-fg);
+  background: var(--mkn-code-bg);
+}
+
+/* =========================================================================
+   暗色模式(Phase 4)—— 仅在文件末尾追加变量覆盖,不改动上面任何既有规则。
+
+   切换方式:document.documentElement.setAttribute("data-theme","dark")。
+   选择器 :root[data-theme="dark"] 特异性高于裸 :root,故只需在此重定义
+   全部 --mkn-* 变量,上面所有 var(--mkn-*) 引用即自动套上暗色,无需重写
+   任何具体规则。配色贴 Typora 暗色气质:近黑而非纯黑的背景、柔和而非
+   刺眼的前景、低饱和 accent,代码块/引用/选区/边框对比舒适。
+   ========================================================================= */
+:root[data-theme="dark"] {
+  /* 背景:深炭灰(非纯黑,久看不刺眼);前景:暖白而非纯白(降眩光) */
+  --mkn-bg: #1e2127;
+  --mkn-fg: #d6d9df;
+  --mkn-fg-soft: #9ba1ad;
+  --mkn-fg-faint: #6b7280;
+  /* accent:比浅色版略提亮,在深底上仍清晰但不荧光刺眼 */
+  --mkn-accent: #6ea8fe;
+  /* 选区:半透明蓝,落在深底上不抢文字 */
+  --mkn-selection: #2f4368;
+  /* 分隔线/边框:比背景略亮一档,存在感弱但可辨 */
+  --mkn-rule: #353a45;
+  /* 代码块底:比正文背景再深一点,形成"凹下去"的层次 */
+  --mkn-code-bg: #282c34;
+  /* 行内/代码前景:暖红改为柔和的玫红,在深底上不刺眼 */
+  --mkn-code-fg: #e0738d;
+  /* 引用竖条:中性灰,够显但不喧宾夺主 */
+  --mkn-quote-bar: #4a515e;
+  /* 字体栈不随主题变,沿用 :root 定义(此处不再重声明) */
+}
+
+/* 暗色下的极少量微调:表格悬浮工具条阴影。原规则用 rgba(0,0,0,.08),
+   在深底上几乎不可见 —— 仅覆盖阴影本身,不动其它任何属性。 */
+:root[data-theme="dark"] .mkn-tbar {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}

@@ -1,0 +1,30 @@
+{
+  // Electron 主进程 / preload 是 Node 环境,与渲染端(DOM)隔离。
+  // 根 tsconfig 的 include 只有 ["src"],不含 electron;
+  // 故单列此配置,electron:typecheck 用它,互不污染。
+  "compilerOptions": {
+    "target": "ES2022",
+    // 实际打包由 vite-plugin-electron(esbuild/rollup)完成,tsc 只做类型检查。
+    // 故沿用根 tsconfig 的 bundler 解析风格:扩展名免写,与 src 代码一致;
+    // 避免 NodeNext 强制 .js 扩展(那会让 import 风格与全仓割裂)。
+    // import.meta.url 在 ESNext 下合法,推导 __dirname 不受影响。
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    // 含 DOM:src/shell/ipc.ts(冻结契约,只读 import)里有 `window` 全局声明,
+    // 不加 DOM 它会报 TS2304。DOM ambient 类型不影响 Node 主进程检查。
+    "lib": ["ES2022", "DOM"],
+    "types": ["node"],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true,
+    "noEmit": true
+  },
+  // 只检查 electron/;src/shell/ipc.ts 仅作类型来源被 import,
+  // TS 会顺着 import 自动纳入做类型检查,无需显式列入(也就不会去碰 src 其余 DOM 代码)。
+  "include": ["."]
+}

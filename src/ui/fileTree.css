@@ -1,0 +1,129 @@
+/* =========================================================================
+   MKN 文件树侧栏(Phase 2)
+   气质对齐 Typora 侧栏:窄、安静、靠缩进与留白说话,不靠线框。
+   配色只取 theme-default.css 的 --mkn-* 变量;低饱和高亮用 color-mix。
+   ========================================================================= */
+
+.mkn-filetree {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 8px 0;
+  font-family: var(--mkn-font-body);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--mkn-fg-soft);
+  background: var(--mkn-bg);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* 细而淡的滚动条,不抢视线 */
+.mkn-filetree::-webkit-scrollbar {
+  width: 8px;
+}
+.mkn-filetree::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--mkn-fg-faint) 40%, transparent);
+  border-radius: 4px;
+}
+.mkn-filetree::-webkit-scrollbar-thumb:hover {
+  background: color-mix(in srgb, var(--mkn-fg-faint) 70%, transparent);
+}
+
+/* 根目录名:一行小标题,字距拉开、弱化 */
+.mkn-ft-rootname {
+  padding: 4px 14px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--mkn-fg-faint);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 一个节点的可点击行(目录或文件共用) */
+.mkn-ft-row {
+  display: flex;
+  align-items: center;
+  height: 26px;
+  padding-right: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+  border-radius: 5px;
+  margin: 0 6px;
+  color: var(--mkn-fg-soft);
+}
+.mkn-ft-row:hover {
+  background: color-mix(in srgb, var(--mkn-accent) 8%, transparent);
+  color: var(--mkn-fg);
+}
+
+/* 当前打开的文件:低饱和高亮,文字与配饰用 accent */
+.mkn-ft-row.mkn-ft-active {
+  background: color-mix(in srgb, var(--mkn-accent) 14%, transparent);
+  color: var(--mkn-accent);
+}
+.mkn-ft-row.mkn-ft-active .mkn-ft-icon {
+  color: var(--mkn-accent);
+}
+
+/* 折叠箭头:无子节点时仍占位以保证文件名左缘对齐 */
+.mkn-ft-twisty {
+  flex: 0 0 auto;
+  width: 14px;
+  text-align: center;
+  font-size: 10px;
+  color: var(--mkn-fg-faint);
+  transition: transform 0.12s ease;
+}
+.mkn-ft-twisty.mkn-ft-open {
+  transform: rotate(90deg);
+}
+.mkn-ft-twisty.mkn-ft-leaf {
+  visibility: hidden;
+}
+
+/* 类型小图标:目录用文件夹、文件用纸,弱对比即可 */
+.mkn-ft-icon {
+  flex: 0 0 auto;
+  width: 18px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--mkn-fg-faint);
+}
+
+/* 文件名:占满剩余宽度,超长省略号 */
+.mkn-ft-label {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 子级容器:逐层缩进靠 JS 设 padding-left */
+.mkn-ft-children {
+  /* 占位,缩进由内联 padding 控制 */
+}
+
+/* 空目录 / 读取失败的占位行:更淡、不可点 */
+.mkn-ft-note {
+  height: 24px;
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  font-style: italic;
+  color: var(--mkn-fg-faint);
+  cursor: default;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 整棵树为空时的中央提示 */
+.mkn-ft-empty {
+  padding: 24px 16px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--mkn-fg-faint);
+}

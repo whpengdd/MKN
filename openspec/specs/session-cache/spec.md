@@ -1,0 +1,37 @@
+# session-cache Specification
+
+## Purpose
+TBD - created by archiving change build-typora-style-editor. Update Purpose after archive.
+## Requirements
+### Requirement: 会话缓存(hot-exit)
+
+应用 SHALL 持续把当前会话(文件路径 + 全文)缓存到主进程:每次编辑防抖(约 350ms),并在失焦/页面隐藏/卸载前各补一次立即写入。缓存对未命名草稿同样生效。
+
+#### Scenario: 编辑后缓存
+
+- **WHEN** 用户编辑文档后停手约 350ms,或窗口失焦
+- **THEN** 当前 `{path, content}` 被写入主进程会话缓存
+
+### Requirement: 启动恢复
+
+启动时应用 SHALL 读取会话缓存并恢复:有路径时以磁盘现内容为 baseline(使 dirty 真实反映未存盘改动),路径已失效时作为未命名草稿保留内容;缓存损坏/缺失则正常空开。
+
+#### Scenario: 重开恢复未保存内容
+
+- **WHEN** 上次退出时存在未保存改动,重新启动应用
+- **THEN** 内容原样恢复,且仍显示"未保存"标记
+
+#### Scenario: 存盘后重开为干净
+
+- **WHEN** 上次已保存该文件后退出,重新启动
+- **THEN** 打开该文件且不显示未保存标记(缓存内容 == 磁盘)
+
+### Requirement: 关闭免确认
+
+应用 MUST NOT 在关闭窗口或退出时弹出"是否保存"确认;关闭零打扰,数据安全由会话缓存与自动保存共同保证。
+
+#### Scenario: 直接关闭不拦截
+
+- **WHEN** 存在未保存改动时关闭窗口或退出应用
+- **THEN** 直接关闭,无任何保存确认弹窗;内容已被缓存,下次启动可恢复
+
