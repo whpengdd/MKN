@@ -1,9 +1,9 @@
 {
-  "name": "mkn",
+  "name": "inkveil",
   "private": true,
   "version": "0.0.0",
   "type": "module",
-  "description": "本地无缝 Markdown 编辑器(Typora 风格)— Phase 0 内核探针",
+  "description": "隐墨 / Inkveil — 本地无缝 Markdown 编辑器(Typora 风格)",
   "main": "dist-electron/main.js",
   "scripts": {
     "dev": "vite",
@@ -11,11 +11,15 @@
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "test": "node --import tsx --test \"src/**/*.test.ts\"",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
     "electron:typecheck": "tsc --noEmit -p electron/tsconfig.json",
     "electron:dev": "MKN_ELECTRON=1 vite",
-    "electron:build": "MKN_ELECTRON=1 vite build && electron-builder"
+    "electron:build": "MKN_ELECTRON=1 vite build && electron-builder",
+    "icon": "electron scripts/gen-icon.mjs"
   },
-  "dependencies": {
+  "devDependencies": {
     "@codemirror/commands": "^6.6.0",
     "@codemirror/lang-markdown": "^6.3.0",
     "@codemirror/language": "^6.10.2",
@@ -25,14 +29,14 @@
     "@codemirror/view": "^6.28.0",
     "@lezer/common": "^1.2.1",
     "@lezer/highlight": "^1.2.0",
-    "katex": "^0.16.11",
-    "markdown-it": "^14.1.1",
-    "mermaid": "^11.4.1"
-  },
-  "devDependencies": {
+    "@tauri-apps/api": "^2.11.0",
+    "@tauri-apps/cli": "^2.11.2",
     "@types/markdown-it": "^14.1.2",
     "electron": "^31.7.7",
     "electron-builder": "^24.13.3",
+    "katex": "^0.16.11",
+    "markdown-it": "^14.1.1",
+    "mermaid": "^11.4.1",
     "tsx": "^4.19.2",
     "typescript": "^5.4.5",
     "vite": "^5.2.11",
@@ -40,8 +44,9 @@
     "vite-plugin-electron-renderer": "^0.14.6"
   },
   "build": {
-    "appId": "com.mkn.editor",
-    "productName": "MKN",
+    "appId": "com.inkveil.editor",
+    "productName": "隐墨",
+    "artifactName": "Inkveil-${version}-${arch}.${ext}",
     "directories": {
       "output": "release"
     },
@@ -50,6 +55,7 @@
       "dist-electron/**"
     ],
     "mac": {
+      "icon": "build/Inkveil.icns",
       "category": "public.app-category.productivity",
       "target": [
         "dmg",
