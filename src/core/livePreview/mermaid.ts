@@ -108,6 +108,15 @@ class MermaidWidget extends WidgetType {
     return false; // 点击正常落光标 → 触发 reveal 出源码
   }
 
+  /**
+   * 测量前高度估计。Mermaid 图通常较高,默认 -1 会让 CM 严重低估,
+   * 其下方文本的点击坐标→位置映射竖直漂移。给个偏大的量级兜底,
+   * 渲染完成后由真实 DOM 高覆盖(同 table.ts/math.ts 缘由)。
+   */
+  get estimatedHeight(): number {
+    return Math.max(160, this.code.split("\n").length * 24);
+  }
+
   private paint(host: HTMLElement, r: RenderResult): void {
     if (r.ok) {
       host.classList.remove("mkn-mermaid-error");
