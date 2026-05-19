@@ -32,12 +32,17 @@ TBD - created by archiving change build-typora-style-editor. Update Purpose afte
 
 ### Requirement: 设置面板
 
-应用 SHALL 提供设置面板:主题(浅色/暗色/跟随系统)、正文字号、专注/打字机默认值;偏好持久化(localStorage),启动即应用。
+应用 SHALL 提供设置面板:主题(浅色/暗色/跟随系统)、正文字号、专注/打字机默认值;偏好持久化(localStorage),启动即应用。设置面板 SHALL 在底部固定展示一段静态开发者版权署名(硬编码:作者 `彭大大`、版本 `2026.05`),该署名只读、不可编辑、不持久化。
 
 #### Scenario: 偏好持久化
 
 - **WHEN** 在设置面板调整主题或字号后重启应用
 - **THEN** 上次选择被保留并在首屏即生效(无浅色闪烁)
+
+#### Scenario: 固定版权署名展示
+
+- **WHEN** 打开设置面板
+- **THEN** 面板底部固定显示作者 `彭大大` 与版本 `2026.05`,文本不可编辑,无任何输入控件
 
 ### Requirement: 暗色模式
 

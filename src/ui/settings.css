@@ -103,6 +103,13 @@
   margin-top: 8px;
   line-height: 1.5;
 }
+.mkn-settings-about {
+  padding: 16px 0 4px;
+  font-size: 11px;
+  color: var(--mkn-fg-faint);
+  line-height: 1.6;
+  text-align: center;
+}
 
 /* 分段选择(主题:浅色/暗色/跟随系统)—— 三段连体按钮 */
 .mkn-seg {

@@ -39,6 +39,10 @@ const FONT_MIN = 13;
 const FONT_MAX = 22;
 const FONT_DEFAULT = 16;
 
+/** 开发者版权署名(固定硬编码,只读展示)。版本以年月字符串维护。 */
+const APP_AUTHOR = "彭大大";
+const APP_VERSION = "2026.05";
+
 /** 安全读 localStorage(隐私模式/禁用时不抛,回退默认)。 */
 function lsGet(key: string): string | null {
   try {
@@ -288,6 +292,15 @@ export function createSettings(opts: SettingsOptions = {}): Settings {
     gExport.append(lExport, wrap, exHint);
     bodyEl.appendChild(gExport);
   }
+
+  /* ---- 固定开发者版权署名(只读,不持久化) ---- */
+  const gAbout = el("div", "mkn-settings-about");
+  const aAuthor = el("div", "mkn-settings-about-line");
+  aAuthor.textContent = `作者:${APP_AUTHOR}`;
+  const aVersion = el("div", "mkn-settings-about-line");
+  aVersion.textContent = `版本:${APP_VERSION}`;
+  gAbout.append(aAuthor, aVersion);
+  bodyEl.appendChild(gAbout);
 
   /* ---- 顶栏入口按钮 ---- */
   const triggerButton = el("button", "mkn-gear-btn");
