@@ -1,7 +1,7 @@
 {
   "name": "inkveil",
   "private": true,
-  "version": "0.0.0",
+  "version": "2026.5.0",
   "type": "module",
   "description": "隐墨 / Inkveil — 本地无缝 Markdown 编辑器(Typora 风格)",
   "main": "dist-electron/main.js",
