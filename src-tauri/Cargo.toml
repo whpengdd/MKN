@@ -27,6 +27,8 @@ tauri-plugin-dialog = "2"
 tauri-plugin-single-instance = "2"
 # 单文件外部改动监听(对齐 electron/main.ts 的 fs.watch + 自写过滤 + 去抖)
 notify = "6"
+# .docx 有损导入(仅查看):解析为 markdown 子集,丢弃样式。
+docx-rs = "0.4"
 
 # Task 2.10 PDF 导出(方案 A:离屏 WKWebView createPDF)。版本严格对齐
 # wry 0.55.1 所锁(否则 PlatformWebview 指针所指对象与这些 binding 的

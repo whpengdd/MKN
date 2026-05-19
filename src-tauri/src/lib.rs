@@ -6,6 +6,7 @@
 //!   files / watcher / persist / assets / exports / menu / state
 
 mod assets;
+mod docx;
 mod exports;
 mod files;
 mod menu;

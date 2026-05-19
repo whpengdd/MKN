@@ -29,12 +29,16 @@ pub struct OpenedFile {
 const MD_EXTS: &[&str] = &["md", "markdown", "txt"];
 
 /// 打开文件对话框:取消返回 None;选中则连内容一起返回。
+///
+/// `.docx`:有损转成 markdown 子集,`path` 置空字符串 —— 渲染端据此当作
+/// 「未命名草稿」载入(不自动保存、不回写原 .docx,见 doc.ts)。
 #[tauri::command]
 pub async fn open_file_dialog(app: AppHandle) -> Result<Option<OpenedFile>, String> {
     let picked = tauri::async_runtime::spawn_blocking(move || {
         app.dialog()
             .file()
             .add_filter("Markdown / 文本", MD_EXTS)
+            .add_filter("Word 文档(仅查看)", &["docx"])
             .blocking_pick_file()
     })
     .await
@@ -42,7 +46,28 @@ pub async fn open_file_dialog(app: AppHandle) -> Result<Option<OpenedFile>, Stri
 
     let Some(fp) = picked else { return Ok(None) };
     let path = fp.into_path().map_err(|e| e.to_string())?;
-    let content = std::fs::read_to_string(&path).map_err(|e| e.to_string())?;
+
+    let is_docx = path
+        .extension()
+        .and_then(|e| e.to_str())
+        .map(|e| e.eq_ignore_ascii_case("docx"))
+        .unwrap_or(false);
+
+    if is_docx {
+        // 解析放阻塞线程池(读盘 + zip 解压 + XML 解析)。
+        let p = path.clone();
+        let content = tauri::async_runtime::spawn_blocking(move || crate::docx::docx_to_markdown(&p))
+            .await
+            .map_err(|e| e.to_string())??;
+        // path 置空 → 渲染端走「导入草稿」,原 .docx 永不被回写。
+        return Ok(Some(OpenedFile {
+            path: String::new(),
+            content,
+        }));
+    }
+
+    let content = std::fs::read_to_string(&path)
+        .map_err(|_| "该文件不是纯文本 / Markdown,无法打开".to_string())?;
     Ok(Some(OpenedFile {
         path: path.to_string_lossy().into_owned(),
         content,

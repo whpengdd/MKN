@@ -48,6 +48,11 @@ export interface DocLifecycle {
   openPath(path: string): Promise<void>;
   /** 用已知内容(对话框已读好的)打开:省一次 readFile。 */
   openWithContent(path: string, content: string): void;
+  /**
+   * 把外部格式(如 .docx)有损导入的内容载入为未命名草稿:
+   * path 置空 → 不自动保存、不回写原文件,想留由用户显式另存为 .md。
+   */
+  openImported(content: string): void;
   /** 新建空白未命名草稿(清空编辑器,path 置空)。 */
   newDoc(): void;
   /** 主动保存。无 path 时走另存为;返回最终是否已落盘。 */
@@ -251,6 +256,16 @@ export function createDocLifecycle(
     view.focus();
   }
 
+  function openImported(content: string): void {
+    // 有损导入(.docx 等):当未命名草稿。path 保持 null →
+    // scheduleAutosave 不落盘、不 watch、不进最近文件,原文件零副作用。
+    cancelAutosave();
+    applyContent(content);
+    path = null;
+    emitPath();
+    view.focus();
+  }
+
   async function saveAs(): Promise<boolean> {
     if (!api) return false;
     const content = view.state.doc.toString();
@@ -304,6 +319,7 @@ export function createDocLifecycle(
   return {
     openPath,
     openWithContent,
+    openImported,
     newDoc,
     save,
     saveAs,

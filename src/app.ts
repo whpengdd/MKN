@@ -759,6 +759,11 @@ function bootShell(api: MknApi): void {
     if (!picked) return;
     if (doc.isDirty() && !window.confirm("有未保存修改,放弃并打开新文件?"))
       return;
+    // path 为空 = 后端有损导入(.docx):当未命名草稿,绝不回写原文件。
+    if (picked.path === "") {
+      doc.openImported(picked.content);
+      return;
+    }
     doc.openWithContent(picked.path, picked.content); // 对话框已读好内容
   }
 
@@ -781,8 +786,9 @@ function bootShell(api: MknApi): void {
   doc.onOpenError((p) => {
     window.alert(
       `「${basename(p)}」不是纯文本 / Markdown 文件,打不开。\n\n` +
-        `隐墨 是 Markdown 编辑器,只支持 .md / .markdown / .txt 等纯文本;` +
-        `.docx / .pdf / 图片 等是二进制格式。`
+        `隐墨 是 Markdown 编辑器,只支持 .md / .markdown / .txt 等纯文本。\n` +
+        `.docx 可经「打开文件」有损导入查看(丢弃样式,不会回写原文件);` +
+        `.pdf / 图片 等二进制格式仍不支持。`
     );
   });
   refreshHeader();

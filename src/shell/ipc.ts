@@ -38,7 +38,11 @@ export type MenuAction =
   | "exportDocx";
 
 export interface MknApi {
-  /** 打开文件对话框;取消返回 null */
+  /**
+   * 打开文件对话框;取消返回 null。
+   * `path === ""` 表示后端有损导入(如 .docx):渲染端当作未命名草稿载入,
+   * 绝不回写原文件。
+   */
   openFileDialog(): Promise<{ path: string; content: string } | null>;
   /** 选择文件夹作为文件树根;取消返回 null */
   openFolderDialog(): Promise<string | null>;
