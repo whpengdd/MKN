@@ -304,6 +304,7 @@ function bootBrowser(): void {
   const outlinePane = el("div", "mkn-side-pane");
   outlinePane.appendChild(outline.element);
   sidebarEl.appendChild(outlinePane);
+  setSidebarCollapsed(true); // 默认折叠侧栏(大纲收起)
 
   // 大纲显隐 == 折叠/展开整条侧栏(此模式侧栏只有大纲)。
   const { syncButtons } = wireUi(view, toolbarRight, {
@@ -724,6 +725,7 @@ function bootShell(api: MknApi): void {
 
   sidebarEl.append(sideHead, filePane, outlinePane);
   setSidebarView("files");
+  setSidebarCollapsed(true); // 默认折叠侧栏(文件/大纲均收起)
 
   /**
    * 大纲显隐(顶栏「大纲」按钮 / ⌘⇧O 的语义):
