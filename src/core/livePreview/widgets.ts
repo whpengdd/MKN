@@ -2,6 +2,7 @@ import { WidgetType, EditorView } from "@codemirror/view";
 import {
   parseTable,
   serializeTable,
+  cellSourceOffset,
   withRowInserted,
   withRowDeleted,
   withColInserted,
@@ -127,6 +128,15 @@ export class TableWidget extends WidgetType {
     return true; // 事件我们自己处理,阻断 CM 默认行为
   }
 
+  /**
+   * 测量前的高度估计(CM 渲染后会用真实 DOM 高覆盖)。默认 -1 会让
+   * CM 在测量前严重低估这块跨多行 widget 的高度,使其上方/下方点击
+   * 坐标→文档位置映射竖直漂移。按源码行数 × 保守行高给个量级即可。
+   */
+  get estimatedHeight(): number {
+    return this.source.split("\n").length * 24;
+  }
+
   private apply(view: EditorView, next: TableModel): void {
     view.dispatch({
       changes: {
@@ -181,12 +191,29 @@ export class TableWidget extends WidgetType {
     wrap.appendChild(this.buildToolbar(view, model));
     wrap.appendChild(table);
 
-    // 点击单元格(非工具条)→ reveal 出源码改文字
+    // 点击单元格(非工具条)→ reveal 出源码,光标**一次点击**精确落到
+    // 被点中那一格对应的源码偏移。绝不再统一跳表格起点 + 逼用户点第二次
+    // ——那第二次点会踩进"源码刚插入、CM 尚未测量折行高度"的高度图失真
+    // 窗口,导致竖直向下偏一行(本次修复的核心症状)。
     wrap.addEventListener("mousedown", (e) => {
-      if ((e.target as HTMLElement).closest(".mkn-tbar")) return;
+      const tgt = e.target as HTMLElement;
+      if (tgt.closest(".mkn-tbar")) return;
       e.preventDefault();
       view.focus();
-      view.dispatch({ selection: { anchor: this.pos } });
+
+      // mkRow 渲染契约(与此处强耦合,改 mkRow 必须同步改这里):
+      //  - 表头格是 <th> 置于 <thead>;数据格是 <td> 置于 <tbody>
+      //  - 列号 = cell.cellIndex;数据行号 = <tr>.sectionRowIndex
+      //    (parseTable 模型行序与之一一对应);表头行号约定为 -1
+      const cell = tgt.closest("td,th") as HTMLTableCellElement | null;
+      let anchor = this.pos; // closest 落空兜底:退回表格起点,绝不崩
+      if (cell) {
+        const tr = cell.closest("tr") as HTMLTableRowElement | null;
+        const isHeader = cell.tagName === "TH";
+        const rowIdx = isHeader ? -1 : (tr?.sectionRowIndex ?? 0);
+        anchor = this.pos + cellSourceOffset(this.source, rowIdx, cell.cellIndex);
+      }
+      view.dispatch({ selection: { anchor } });
     });
 
     return wrap;

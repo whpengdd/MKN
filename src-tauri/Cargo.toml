@@ -1,0 +1,30 @@
+[package]
+name = "app"
+version = "0.0.0"
+description = "隐墨 / Inkveil — 本地无缝 Markdown 编辑器"
+authors = ["Inkveil"]
+license = ""
+repository = ""
+edition = "2021"
+rust-version = "1.77.2"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+name = "app_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2.6.2", features = [] }
+
+[dependencies]
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+log = "0.4"
+tauri = { version = "2.11.2", features = [] }
+tauri-plugin-log = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-single-instance = "2"
+# 单文件外部改动监听(对齐 electron/main.ts 的 fs.watch + 自写过滤 + 去抖)
+notify = "6"
+# 方案 A(WKWebView createPDF)的 objc2 绑定在 Task 2.10 单列加入,此处暂不引。

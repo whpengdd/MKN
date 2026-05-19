@@ -66,6 +66,10 @@ class BlockMathWidget extends WidgetType {
   eq(o: BlockMathWidget): boolean {
     return o.tex === this.tex;
   }
+  /** 测量前高度估计:避免块级公式上方点击坐标竖直漂移(同 table.ts 缘由)。 */
+  get estimatedHeight(): number {
+    return this.tex.split("\n").length * 28 + 16;
+  }
   toDOM(): HTMLElement {
     const div = document.createElement("div");
     div.className = "mkn-math mkn-math-block";

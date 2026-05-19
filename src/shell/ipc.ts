@@ -1,13 +1,16 @@
 /**
- * ★ 冻结的 IPC 契约 —— 渲染端 ↔ Electron 主进程 的唯一接口。
+ * ★ MknApi 契约 + 外壳适配层。
  *
- * 这是 Phase 2 三个并行 agent 的共享接缝:
- *  - 主进程 / preload(electron/)实现并经 contextBridge 暴露为 window.mkn
- *  - 文件树(src/ui/)与应用壳(src/app.ts)只通过本契约调用
+ * 历史:Phase 2 曾是"冻结的 Electron IPC 契约",实现位于 electron/preload.ts。
+ * Tauri 迁移后,preload 不复存在——本文件**接口定义逐字不变**(仍是渲染端
+ * 唯一接缝,src/ui、src/app.ts 一行不改),仅把 `getShell()` 的实现从读
+ * `window.mkn` 改为基于 `@tauri-apps/api` 的 invoke/event 适配。
  *
- * 不要修改本文件。若发现契约不够用,反馈给协调者统一改,
- * 不要各自扩展(否则集成必崩)。
+ * 边界:接口 = 冻结契约,任何方法签名/语义都不得改;若不够用反馈协调者统一改。
  */
+
+import { invoke } from "@tauri-apps/api/core";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 export interface FileEntry {
   name: string;
@@ -127,12 +130,106 @@ export interface MknApi {
 
 declare global {
   interface Window {
-    /** 仅在 Electron 渲染端存在;纯浏览器 dev 下为 undefined */
+    /** 旧 Electron 渲染端遗留;Tauri 下不存在,仅保留类型不破坏既有引用。 */
     mkn?: MknApi;
+    /** Tauri v2 注入;据此判定是否在 Tauri 外壳内(纯浏览器 dev 下缺失)。 */
+    __TAURI_INTERNALS__?: unknown;
   }
 }
 
-/** 渲染端统一取用入口:浏览器 dev 下返回 null,壳层据此降级为无文件功能的纯编辑器 */
+/** 把 Tauri 的异步 listen(返回 Promise<UnlistenFn>)适配成 MknApi 约定的
+ *  同步取消订阅函数:持有 promise,取消时 then 掉。 */
+function toUnsub(p: Promise<UnlistenFn>): () => void {
+  return () => {
+    void p.then((f) => f()).catch(() => {});
+  };
+}
+
+/** 构造基于 Tauri invoke/event 的 MknApi 实现。命令名用 Rust 侧 snake_case;
+ *  参数键用 camelCase(Tauri 默认自动转 snake_case 形参)。 */
+function createTauriApi(): MknApi {
+  return {
+    openFileDialog: () => invoke("open_file_dialog"),
+    openFolderDialog: () => invoke("open_folder_dialog"),
+    readDir: (dirPath) => invoke("read_dir", { dirPath }),
+    readFile: (path) => invoke("read_file", { path }),
+    saveFile: (path, content) => invoke("save_file", { path, content }),
+    saveFileAs: (content, defaultPath) =>
+      invoke("save_file_as", { content, defaultPath: defaultPath ?? null }),
+
+    // fire-and-forget:不回传 promise(契约返回 void),失败静默。
+    watchFile: (path) => {
+      void invoke("watch_file", { path }).catch(() => {});
+    },
+    onFileChanged: (cb) =>
+      toUnsub(listen<string>("mkn:file-changed", (e) => cb(e.payload))),
+
+    onMenuAction: (cb) =>
+      toUnsub(listen<MenuAction>("mkn:menu-action", (e) => cb(e.payload))),
+
+    getRecentFiles: () => invoke("get_recent_files"),
+    addRecentFile: (path) => invoke("add_recent_file", { path }),
+
+    setDocumentEdited: (edited) => {
+      void invoke("set_document_edited", { edited }).catch(() => {});
+    },
+
+    onOpenPath: (cb) =>
+      toUnsub(listen<string>("mkn:open-path", (e) => cb(e.payload))),
+
+    setDocTitle: (path) => {
+      void invoke("set_doc_title", { path: path ?? null }).catch(() => {});
+    },
+
+    cacheSession: (session) => {
+      void invoke("cache_session", { session }).catch(() => {});
+    },
+    loadSession: () => invoke("load_session"),
+
+    saveAsset: (docPath, data, ext) =>
+      // Tauri 把 number[] 反序列化为 Rust Vec<u8>。
+      invoke("save_asset", { docPath, data: Array.from(data), ext }),
+
+    exportHtml: (html, defaultName) =>
+      invoke("export_html", { html, defaultName }),
+    exportPdf: (html, defaultName) =>
+      invoke("export_pdf", { html, defaultName }),
+    hasPandoc: () => invoke("has_pandoc"),
+    pandocExport: (markdown, format, defaultName) =>
+      invoke("pandoc_export", { markdown, format, defaultName }),
+  };
+}
+
+/** 单例:getShell 可能被多处多次调用(app.ts 顶层 + 每次粘贴图片),
+ *  外壳实现只建一次;renderer_ready 也只发一次。 */
+let cached: MknApi | null | undefined;
+
+/**
+ * 渲染端统一取用入口:
+ *  - 在 Tauri 外壳内 → 返回基于 invoke/event 的 MknApi 实现
+ *  - 纯浏览器 dev(无 __TAURI_INTERNALS__)→ 返回 null,壳层降级为无文件
+ *    功能的纯编辑器(与旧行为一致,bootBrowser 路径不变)
+ */
 export function getShell(): MknApi | null {
-  return typeof window !== "undefined" && window.mkn ? window.mkn : null;
+  if (cached !== undefined) return cached;
+
+  const inTauri =
+    typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+  if (!inTauri) {
+    cached = null;
+    return cached;
+  }
+
+  cached = createTauriApi();
+
+  // 通知后端"渲染端 IPC 已接好",补发访达冷启动暂存的待打开文件
+  // (对齐 electron 的 did-finish-load → flush pendingOpenFile)。
+  // 略微延后:让 app.ts 的 bootShell 先把 onOpenPath 等监听挂上、其
+  // listen() 注册往返完成,backend 再 emit open-path 才不会漏
+  // (与旧版 did-finish-load 同属"靠时机"的冷启动取舍)。
+  setTimeout(() => {
+    void invoke("renderer_ready").catch(() => {});
+  }, 120);
+
+  return cached;
 }

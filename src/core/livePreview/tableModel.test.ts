@@ -9,6 +9,7 @@ import {
   withColDeleted,
   withAlign,
   nextAlign,
+  cellSourceOffset,
 } from "./tableModel";
 
 const SRC = `| 功能 | Phase | 状态 |
@@ -74,6 +75,44 @@ test("守卫:不能删到 0 行 / 0 列", () => {
   const one = parseTable(`| a |\n| - |\n| x |`);
   assert.equal(withRowDeleted(one, 0).rows.length, 1);
   assert.equal(withColDeleted(one, 0).header.length, 1);
+});
+
+test("cellSourceOffset:表头各列落到列内容起点", () => {
+  const at = (r: number, c: number) => SRC.slice(cellSourceOffset(SRC, r, c));
+  assert.ok(at(-1, 0).startsWith("功能"));
+  assert.ok(at(-1, 1).startsWith("Phase"));
+  assert.ok(at(-1, 2).startsWith("状态"));
+});
+
+test("cellSourceOffset:首/末数据行定位正确(不偏行)", () => {
+  const at = (r: number, c: number) => SRC.slice(cellSourceOffset(SRC, r, c));
+  assert.ok(at(0, 0).startsWith("无缝隐现"));
+  assert.ok(at(0, 2).startsWith("验证中"));
+  assert.ok(at(1, 0).startsWith("表格编辑"));
+  assert.ok(at(1, 2).startsWith("进行"));
+});
+
+test("cellSourceOffset:CJK 列宽填充后仍跳过空白落到内容", () => {
+  const padded = serializeTable(parseTable(SRC));
+  assert.ok(padded.slice(cellSourceOffset(padded, 0, 0)).startsWith("无缝隐现"));
+  assert.ok(padded.slice(cellSourceOffset(padded, 1, 2)).startsWith("进行"));
+});
+
+test("cellSourceOffset:转义 \\| 不被当作列分隔", () => {
+  const s = `| a | b |\n| - | - |\n| x \\| y | z |`;
+  assert.ok(s.slice(cellSourceOffset(s, 0, 0)).startsWith("x \\| y"));
+  assert.ok(s.slice(cellSourceOffset(s, 0, 1)).startsWith("z"));
+});
+
+test("cellSourceOffset:缺分隔行降级,行/列越界 clamp 不抛错", () => {
+  const noDelim = `| a | b |\n| c | d |`;
+  assert.ok(noDelim.slice(cellSourceOffset(noDelim, -1, 1)).startsWith("b"));
+  assert.ok(noDelim.slice(cellSourceOffset(noDelim, 0, 1)).startsWith("d"));
+
+  const off = cellSourceOffset(SRC, 999, 999);
+  assert.ok(off >= 0 && off <= SRC.length);
+  // 末行最后一格:落在 "进行" 处(列越界停在最后一格)
+  assert.ok(SRC.slice(off).startsWith("进行"));
 });
 
 test("转义管道 \\| 在解析与序列化中保留", () => {

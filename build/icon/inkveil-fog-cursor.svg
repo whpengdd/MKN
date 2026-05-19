@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 隐墨 / Inkveil — 雾中光标 (direction 07, variant A "默认款").
+     Faithful reproduction of IconFogCursor variant="default", full render
+     (size >= 48). Source: Claude Design bundle, app-icon/project/fog-icons.jsx.
+     rgba() gradient stops rewritten as spec-correct stop-color + stop-opacity. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#3a4050"/>
+      <stop offset="1" stop-color="#14121c"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#f5efe1" stop-opacity="0.55"/>
+      <stop offset="0.45" stop-color="#000000" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="blur" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur stdDeviation="22"/>
+    </filter>
+  </defs>
+
+  <!-- cool-ink squircle -->
+  <rect width="1024" height="1024" rx="232" fill="url(#bg)"/>
+
+  <!-- faint text-line hints (top-left + bottom-right) -->
+  <g opacity="0.16" fill="#f5efe1">
+    <rect x="220" y="270" width="320" height="22" rx="11"/>
+    <rect x="220" y="328" width="260" height="22" rx="11"/>
+    <rect x="528" y="704" width="276" height="22" rx="11"/>
+    <rect x="528" y="762" width="200" height="22" rx="11"/>
+  </g>
+
+  <!-- soft cream halo -->
+  <rect x="180" y="200" width="664" height="624" fill="url(#glow)"/>
+
+  <!-- cursor self-glow (blurred duplicate behind) -->
+  <rect x="498" y="280" width="28" height="464" rx="14" fill="#f5efe1" opacity="0.65" filter="url(#blur)"/>
+
+  <!-- the cursor itself -->
+  <rect x="498" y="280" width="28" height="464" rx="14" fill="#f5efe1"/>
+
+  <!-- inner hairline border -->
+  <rect x="4" y="4" width="1016" height="1016" rx="230" ry="230" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2"/>
+</svg>

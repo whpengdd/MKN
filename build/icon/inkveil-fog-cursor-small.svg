@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 隐墨 / Inkveil — 雾中光标, small-size adaptation (rendered size < 48).
+     Per the design's explicit decision: thicken the cursor to 17.6% width and
+     drop halo + hints + glow so it survives at 16/32 px (a 0.44px hair otherwise).
+     Mirrors IconFogCursor's `small` branch. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0.5" y1="0" x2="0.5" y2="1">
+      <stop offset="0" stop-color="#3a4050"/>
+      <stop offset="1" stop-color="#14121c"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="232" fill="url(#bg)"/>
+
+  <!-- fat cursor: w=180 (17.6%), h=600, centered, y=212 -->
+  <rect x="422" y="212" width="180" height="600" rx="90" fill="#f5efe1"/>
+
+  <rect x="4" y="4" width="1016" height="1016" rx="230" ry="230" fill="none" stroke="#ffffff" stroke-opacity="0.08" stroke-width="2"/>
+</svg>

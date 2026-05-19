@@ -1192,10 +1192,24 @@ function injectShellStyles(): void {
     white-space: pre-wrap;
     word-break: break-word;
   }
+  /* WKWebView 已知 flex 缺陷:父高来自 flex 拉伸(无显式 height)时,
+     子级 height:100% 被 WebKit 当 auto(Chromium 解析为确定值)。
+     原写法 #app{overflow:auto} + .cm-editor{height:100%} 在 WKWebView 下
+     会让 .cm-editor 撑成全文档高、滚动跑到 #app,导致 posAtCoords 错位
+     (选字/点击落点偏,越往下越狠)。改为 #app 自身做 flex 列容器、
+     .cm-editor 以 flex 撑满(不靠百分比高度),并去掉 #app overflow ——
+     CodeMirror 自带的 .cm-scroller 复位为唯一滚动容器,引擎无关地正确。 */
   .mkn-body > #app {
     flex: 1 1 auto;
     min-width: 0;
-    overflow: auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+  .mkn-body > #app > .cm-editor {
+    flex: 1 1 auto;
+    min-height: 0;
+    height: auto;
   }
   `;
   const style = document.createElement("style");
