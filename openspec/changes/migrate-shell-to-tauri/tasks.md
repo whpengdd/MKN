@@ -20,7 +20,7 @@
 - [x] 2.7 系统级打开文件:tauri.conf fileAssociations + RunEvent::Opened + 冷启动 argv 暂存 + renderer_ready 就绪下发 + single-instance 插件
 - [x] 2.8 set_doc_title(窗口标题用 Tauri 原生 API);set_document_edited 与 macOS 代理图标/圆点为装饰,降级 no-op,真·objc2 实现并入 2.10 批次
 - [x] 2.9 export_html 落盘;has_pandoc 探测;pandoc_export(stdin 喂入,不经 shell,非0退出码返 null)
-- [ ] 2.10 PDF 导出(方案 A:objc2 离屏 WKWebView createPDF)+ 同批补 macOS setDocumentEdited 圆点/代理图标 — 当前为诚实占位(明确报错)
+- [x] 2.10 PDF 导出(方案 A,objc2 离屏 WKWebView createPDF):exports.rs `macos_pdf` —— 另存 → 临时 HTML → 隐藏 WebviewWindow → on_page_load(10s 超时)+350ms settle → with_webview 主线程 `createPDFWithConfiguration_completionHandler(None,…)` → block 拷 NSData→Vec → 写盘+selfWrite;RAII Cleanup 关窗+删临时文件(对齐 electron exportPdf)。**用户真机验收通过**。遗留(非阻塞小项):macOS setDocumentEdited 圆点/代理图标仍 no-op
 
 ## 3. 渲染端适配层
 
@@ -29,11 +29,11 @@
 - [x] 3.3 确认 `src/core/** | src/ui/** | src/export/**` 零改动 + `src/app.ts` 逻辑零改动 — `npm run typecheck` 通过(EXIT=0);app.ts 后因 3.5 放宽:仅 injectShellStyles 布局 CSS 一处
 - [x] 3.4 浏览器降级路径正常 — preview 实测:vite dev 无 `__TAURI_INTERNALS__` → getShell 返 null → bootBrowser 挂载编辑器/字数/大纲/设置,零报错
 - [x] 3.5 单滚动容器修正(WebKit flex 健壮性):injectShellStyles 改 #app flex 列容器 + .cm-editor flex 撑满 + 去 overflow。design.md 决策 9 —— 注:实测**非**根因(改后仍错),但为正确修正,保留
-- [ ] 3.6 **根因修复**:`theme-default.css` 的 `.cm-line` 用 margin 违反 CM6 约束 → 高度图与渲染失同步 → posAtCoords 落错行(选字/表格定位错的真凶,既有 bug、引擎无关)。已把 `.cm-line.cm-hp-h1..6 / codeblock-first/last / .mkn-hr / .mkn-table-wrap` 纵向 margin 全改 padding;design.md 决策 10、放宽 src/styles 约束;临时诊断 cursorDiag.ts 已删。preview(Chromium)复测 14 行 13 行 dy≈0 命中本行 — **待用户真机(WKWebView)确认选字/表格定位恢复**
+- [x] 3.6 **根因修复**:`theme-default.css` 的 `.cm-line` 用 margin 违反 CM6 约束 → 高度图与渲染失同步 → posAtCoords 落错行(选字/表格定位错的真凶,既有 bug、引擎无关)。`.cm-line.cm-hp-h1..6 / codeblock-first/last / .mkn-hr / .mkn-table-wrap` 纵向 margin 全改 padding;design.md 决策 10、放宽 src/styles 约束;临时诊断 cursorDiag.ts 已删。preview 复测 dy≈0;**用户真机(WKWebView)确认选字/拖选/表格定位恢复**
 
 ## 4. 验收与收尾
 
 - [ ] 4.1 全功能真机回归:打开/保存/自保存/外部监听/菜单/访达双击/单实例/图片粘贴/会话恢复/三路导出
-- [ ] 4.2 体积验收:`tauri build` 后安装 App ≤ 20MB(目标 ~10MB),记录实测值
+- [x] 4.2 体积验收:`tauri build` 实测 **App 12MB / DMG 5.7MB**(vs Electron 351MB / 125MB,-97%)≤ 20MB 目标达成
 - [ ] 4.3 用户最终验收
 - [ ] 4.4 移除 `electron/`、相关依赖与脚本;更新 README / 打包说明 / 主 specs

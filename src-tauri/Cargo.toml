@@ -27,4 +27,12 @@ tauri-plugin-dialog = "2"
 tauri-plugin-single-instance = "2"
 # 单文件外部改动监听(对齐 electron/main.ts 的 fs.watch + 自写过滤 + 去抖)
 notify = "6"
-# 方案 A(WKWebView createPDF)的 objc2 绑定在 Task 2.10 单列加入,此处暂不引。
+
+# Task 2.10 PDF 导出(方案 A:离屏 WKWebView createPDF)。版本严格对齐
+# wry 0.55.1 所锁(否则 PlatformWebview 指针所指对象与这些 binding 的
+# WKWebView 类型不一致)。仅 macOS 编译;其余平台 export_pdf 走 cfg 占位。
+[target.'cfg(target_os = "macos")'.dependencies]
+objc2 = "0.6"
+objc2-foundation = { version = "0.3", default-features = false, features = ["std", "NSData", "NSError"] }
+objc2-web-kit = { version = "0.3", default-features = false, features = ["std", "WKWebView", "WKPDFConfiguration", "block2"] }
+block2 = "0.6"
