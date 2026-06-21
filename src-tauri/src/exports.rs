@@ -92,30 +92,80 @@ pub async fn pandoc_export(
     let out_path = fp.into_path().map_err(|e| e.to_string())?;
     let out_str = out_path.to_string_lossy().into_owned();
 
-    let result = tauri::async_runtime::spawn_blocking(move || -> Option<String> {
+    // 运行期失败(进程起不来 / 非 0 退出)返回 Err,让渲染端可据此回落到
+    // 内置生成器;取消则在前面已 return Ok(None)。两者由此可区分。
+    let result = tauri::async_runtime::spawn_blocking(move || -> Result<String, String> {
         let mut child = Command::new("pandoc")
             .args(["-f", "markdown", "-t", &format, "-o", &out_str])
             .stdin(Stdio::piped())
             .stdout(Stdio::null())
             .stderr(Stdio::piped())
             .spawn()
-            .ok()?;
+            .map_err(|e| format!("启动 pandoc 失败:{e}"))?;
         // markdown 经 stdin 喂入,写完关闭以触发 pandoc 处理。
-        child.stdin.take()?.write_all(markdown.as_bytes()).ok()?;
-        let status = child.wait().ok()?;
+        child
+            .stdin
+            .take()
+            .ok_or_else(|| "无法写入 pandoc stdin".to_string())?
+            .write_all(markdown.as_bytes())
+            .map_err(|e| e.to_string())?;
+        let status = child.wait().map_err(|e| e.to_string())?;
         if status.success() {
-            Some(out_str)
+            Ok(out_str)
         } else {
-            None
+            Err(format!("pandoc 退出码 {:?}", status.code()))
         }
+    })
+    .await
+    .map_err(|e| e.to_string())??;
+
+    state.mark_self_write(&PathBuf::from(&result));
+    Ok(Some(result))
+}
+
+/// 内置 Word 导出落盘:渲染端用 fflate 生成好 .docx 字节(bytes),这里只弹
+/// 另存对话框并写盘(对齐 export_html / export_pdf 的分工:渲染端产内容、
+/// 主进程落盘 + 打 self_write 标记)。bytes 由渲染端以 number[]/Uint8Array
+/// 传来,serde 收成 Vec<u8>。
+#[tauri::command]
+pub async fn export_docx_bytes(
+    bytes: Vec<u8>,
+    default_name: String,
+    app: AppHandle,
+    state: State<'_, AppState>,
+) -> Result<Option<String>, String> {
+    let app2 = app.clone();
+    let name = default_name.clone();
+    let picked = tauri::async_runtime::spawn_blocking(move || {
+        app2.dialog()
+            .file()
+            .add_filter("Word", &["docx"])
+            .set_file_name(&format!("{name}.docx"))
+            .blocking_save_file()
     })
     .await
     .map_err(|e| e.to_string())?;
 
-    if let Some(ref p) = result {
-        state.mark_self_write(&PathBuf::from(p));
+    match picked {
+        None => Ok(None),
+        Some(fp) => {
+            let p = fp.into_path().map_err(|e| e.to_string())?;
+            state.mark_self_write(&p);
+            std::fs::write(&p, bytes).map_err(|e| e.to_string())?;
+            Ok(Some(p.to_string_lossy().into_owned()))
+        }
     }
-    Ok(result)
+}
+
+/// 读取本地图片字节(供内置 Word 导出嵌入图片)。渲染端把 markdown 里的
+/// 相对 src 解析成绝对路径后调用;读不到返回 None(不抛),由渲染端降级为
+/// 占位文本。仅用于导出,纯读不写。
+#[tauri::command]
+pub async fn read_image_bytes(path: String) -> Result<Option<Vec<u8>>, String> {
+    let bytes = tauri::async_runtime::spawn_blocking(move || std::fs::read(&path).ok())
+        .await
+        .map_err(|e| e.to_string())?;
+    Ok(bytes)
 }
 
 /// 导出 PDF —— 方案 A(离屏 WKWebView createPDF)。

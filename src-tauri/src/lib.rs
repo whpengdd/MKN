@@ -146,6 +146,8 @@ pub fn run() {
             exports::has_pandoc,
             exports::pandoc_export,
             exports::export_pdf,
+            exports::export_docx_bytes,
+            exports::read_image_bytes,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application");

@@ -130,6 +130,22 @@ export interface MknApi {
     format: string,
     defaultName: string
   ): Promise<string | null>;
+
+  /**
+   * 内置 Word 导出落盘:渲染端用 fflate 生成好 .docx 字节,主进程弹另存
+   * 对话框并写盘(不依赖 pandoc)。
+   * @returns 保存路径;取消返回 null
+   */
+  exportDocxBytes(
+    bytes: Uint8Array,
+    defaultName: string
+  ): Promise<string | null>;
+
+  /**
+   * 读取本地图片字节(供内置 Word 导出嵌入图片)。传绝对路径;
+   * 读不到返回 null(由调用方降级为占位文本)。
+   */
+  readImageBytes(path: string): Promise<number[] | null>;
 }
 
 declare global {
@@ -201,6 +217,10 @@ function createTauriApi(): MknApi {
     hasPandoc: () => invoke("has_pandoc"),
     pandocExport: (markdown, format, defaultName) =>
       invoke("pandoc_export", { markdown, format, defaultName }),
+    exportDocxBytes: (bytes, defaultName) =>
+      // Tauri 把 number[] 反序列化为 Rust Vec<u8>(同 save_asset)。
+      invoke("export_docx_bytes", { bytes: Array.from(bytes), defaultName }),
+    readImageBytes: (path) => invoke("read_image_bytes", { path }),
   };
 }
 

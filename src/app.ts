@@ -39,6 +39,11 @@ import type { SettingsExportActions } from "./ui/settings";
 // A 与本文件并行,typecheck 时该模块可能尚未就位 → 报"找不到模块"属预期
 // 跨 agent 缺口;签名严格对齐,协调者统一 typecheck 时即闭合。
 import { renderStandaloneHtml } from "./export/render";
+import {
+  renderDocx,
+  collectImageSources,
+  type DocxImage,
+} from "./export/docx";
 
 // ── Phase 3 特性扩展(A/B agent 并行新建;按冻结签名 import)──────────────
 //  这些模块由其它 agent 并行创建;统一 typecheck 由协调者跑。本文件严格
@@ -556,25 +561,41 @@ function buildExportActions(
     }
   }
 
+  /** 内置生成器(不依赖 pandoc):先解析图片字节,再产 .docx 落盘。 */
+  async function exportDocxBuiltin(shell: MknApi, name: string): Promise<void> {
+    const markdown = getMarkdown();
+    const docPath = getDocPath();
+    // 预解析图片字节(renderDocx 保持纯函数,磁盘/解码副作用前移到此)。
+    const srcs = collectImageSources(markdown);
+    const images: Record<string, DocxImage> = {};
+    for (const src of srcs) {
+      const img = await resolveDocxImage(shell, src, docPath);
+      if (img) images[src] = img; // 读不到的留空,生成器自会降级占位
+    }
+    const bytes = renderDocx(markdown, { title: name, images });
+    await shell.exportDocxBytes(bytes, `${name}.docx`);
+  }
+
   async function exportDocx(): Promise<void> {
     const shell = getShell();
     if (!shell) {
       notify("导出 Word 仅在 Electron 外壳中可用(浏览器预览无文件系统)。");
       return;
     }
+    const name = exportBaseName(getDocPath());
     try {
-      // Word 走 pandoc:先探测,没有就明确提示去装,而不是静默失败。
-      const ok = await shell.hasPandoc();
-      if (!ok) {
-        notify(
-          "导出 Word(.docx)需要系统安装 pandoc。\n\n" +
-            "安装后重启 隐墨 即可使用(macOS:brew install pandoc)。"
-        );
-        return;
+      // 分层降级:有 pandoc 优先用(保真高),失败回落内置;无 pandoc 直接内置。
+      if (await shell.hasPandoc()) {
+        try {
+          // pandoc 直接吃 markdown 源(零转换),不经 HTML。
+          // 成功返回路径、取消返回 null;运行期失败会抛错 → 落入 catch 回落内置。
+          await shell.pandocExport(getMarkdown(), "docx", `${name}.docx`);
+          return;
+        } catch {
+          notify("pandoc 导出失败,改用内置生成器继续导出 Word。");
+        }
       }
-      const name = exportBaseName(getDocPath());
-      // pandoc 直接吃 markdown 源(零转换),不经 HTML,保真度更高。
-      await shell.pandocExport(getMarkdown(), "docx", `${name}.docx`);
+      await exportDocxBuiltin(shell, name);
     } catch (err) {
       const m = err instanceof Error ? err.message : String(err);
       notify(`导出 Word 失败:${m}`);
@@ -1024,6 +1045,57 @@ function makeToggleBtn(label: string, title: string): HTMLElement {
 function basename(p: string): string {
   const parts = p.split(/[\\/]/);
   return parts[parts.length - 1] || p;
+}
+
+/** 取目录部分(去掉最后一段)。无分隔符返回 "."。 */
+function dirname(p: string): string {
+  const i = Math.max(p.lastIndexOf("/"), p.lastIndexOf("\\"));
+  return i >= 0 ? p.slice(0, i) : ".";
+}
+
+/** 是否绝对路径(POSIX `/...` 或 Windows 盘符 `C:\...`)。 */
+function isAbsolutePath(p: string): boolean {
+  return /^([a-zA-Z]:[\\/]|[\\/])/.test(p);
+}
+
+/** 据扩展名猜 MIME(导出嵌图用,读不出按 png)。 */
+function mimeFromExt(p: string): string {
+  const ext = p.slice(p.lastIndexOf(".") + 1).toLowerCase();
+  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
+  if (ext === "gif") return "image/gif";
+  if (ext === "bmp") return "image/bmp";
+  return "image/png";
+}
+
+/**
+ * 解析一张图片 src → 字节。data URI 在渲染端同步解;本地路径经主进程读;
+ * 远程 URL / 读不到 → 返回 null(由 docx 生成器降级为占位文本)。
+ * 让 renderDocx 保持纯函数:磁盘/解码副作用全部前移到此处。
+ */
+async function resolveDocxImage(
+  shell: MknApi,
+  src: string,
+  docPath: string | null
+): Promise<DocxImage | null> {
+  const dataM = /^data:([^;,]*)(;base64)?,([\s\S]*)$/.exec(src);
+  if (dataM) {
+    const mime = dataM[1] || "image/png";
+    try {
+      const bytes = dataM[2]
+        ? Uint8Array.from(atob(dataM[3]), (c) => c.charCodeAt(0))
+        : new TextEncoder().encode(decodeURIComponent(dataM[3]));
+      return { bytes, mime };
+    } catch {
+      return null;
+    }
+  }
+  // 远程图片:导出不抓网,降级占位。
+  if (/^[a-z]+:\/\//i.test(src)) return null;
+  if (!docPath) return null;
+  const abs = isAbsolutePath(src) ? src : dirname(docPath) + "/" + src;
+  const arr = await shell.readImageBytes(abs);
+  if (!arr) return null;
+  return { bytes: Uint8Array.from(arr), mime: mimeFromExt(src) };
 }
 
 /* =========================================================================
